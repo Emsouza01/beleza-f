@@ -15,13 +15,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { services, professionals } from "@/data/sampleData";
+import { getServices, getProfessionals, createAppointment } from "@/services/api";
+import { Service, Professional } from "@/types/models";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
 const Booking = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Data states
+  const [services, setServices] = useState<Service[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Form states
   const [selectedService, setSelectedService] = useState<string>("");
@@ -32,9 +38,37 @@ const Booking = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Available times based on professional's schedule
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  
+  // Fetch services and professionals
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [servicesData, professionalsData] = await Promise.all([
+          getServices(),
+          getProfessionals()
+        ]);
+        
+        setServices(servicesData);
+        setProfessionals(professionalsData);
+      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados. Tente novamente mais tarde.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
   
   // Get any pre-selected service or professional from URL
   useEffect(() => {
@@ -53,7 +87,7 @@ const Booking = () => {
   // Update available times when professional or date changes
   useEffect(() => {
     if (selectedProfessional && selectedDate) {
-      const professional = professionals.find(p => p.id.toString() === selectedProfessional);
+      const professional = professionals.find(p => p.id === selectedProfessional);
       if (professional) {
         const dayOfWeek = format(selectedDate, "EEEE");
         // Convert English day name to Portuguese
@@ -84,9 +118,9 @@ const Booking = () => {
       setAvailableTimes([]);
       setSelectedTime("");
     }
-  }, [selectedProfessional, selectedDate, toast]);
+  }, [selectedProfessional, selectedDate, professionals, toast]);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Form validation
@@ -99,43 +133,75 @@ const Booking = () => {
       return;
     }
     
-    // Find service and professional objects
-    const service = services.find(s => s.id.toString() === selectedService);
-    const professional = professionals.find(p => p.id.toString() === selectedProfessional);
-    
-    if (!service || !professional) {
+    try {
+      setIsSubmitting(true);
+      
+      // Create appointment
+      const appointment = await createAppointment({
+        serviceId: selectedService,
+        professionalId: selectedProfessional,
+        customerName: name,
+        customerEmail: email,
+        customerPhone: phone,
+        date: format(selectedDate, "yyyy-MM-dd"),
+        time: selectedTime,
+        status: "pending"
+      });
+      
+      if (appointment) {
+        // Find service and professional objects
+        const service = services.find(s => s.id === selectedService);
+        const professional = professionals.find(p => p.id === selectedProfessional);
+        
+        // Success message
+        toast({
+          title: "Agendamento realizado com sucesso!",
+          description: `Seu horário com ${professional?.name} para ${service?.name} no dia ${format(selectedDate, "dd/MM/yyyy")} às ${selectedTime} foi agendado. Enviaremos uma confirmação por email.`,
+        });
+        
+        // Reset form
+        setSelectedService("");
+        setSelectedProfessional("");
+        setSelectedDate(undefined);
+        setSelectedTime("");
+        setName("");
+        setEmail("");
+        setPhone("");
+        setNotes("");
+      }
+    } catch (error) {
+      console.error("Erro ao criar agendamento:", error);
       toast({
         title: "Erro no agendamento",
-        description: "Serviço ou profissional não encontrado.",
+        description: "Não foi possível realizar o agendamento. Tente novamente mais tarde.",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    // Success message
-    toast({
-      title: "Agendamento realizado com sucesso!",
-      description: `Seu horário com ${professional.name} para ${service.name} no dia ${format(selectedDate, "dd/MM/yyyy")} às ${selectedTime} foi agendado. Enviaremos uma confirmação por email.`,
-    });
-    
-    // Reset form
-    setSelectedService("");
-    setSelectedProfessional("");
-    setSelectedDate(undefined);
-    setSelectedTime("");
-    setName("");
-    setEmail("");
-    setPhone("");
-    setNotes("");
   };
   
   // Filter professionals based on selected service
   const filteredProfessionals = selectedService
     ? professionals.filter(pro => {
-        const service = services.find(s => s.id.toString() === selectedService);
+        const service = services.find(s => s.id === selectedService);
         return service && pro.specialties.some(spec => spec.includes(service.category));
       })
     : professionals;
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen">
+          <div className="salon-container py-20 text-center">
+            <p className="text-lg">Carregando...</p>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
   
   return (
     <>
@@ -171,7 +237,7 @@ const Booking = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id.toString()}>
+                        <SelectItem key={service.id} value={service.id}>
                           {service.name} - R$ {service.price.toFixed(2)}
                         </SelectItem>
                       ))}
@@ -192,7 +258,7 @@ const Booking = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {filteredProfessionals.map((professional) => (
-                        <SelectItem key={professional.id} value={professional.id.toString()}>
+                        <SelectItem key={professional.id} value={professional.id}>
                           {professional.name} - {professional.role}
                         </SelectItem>
                       ))}
@@ -298,8 +364,9 @@ const Booking = () => {
                     type="submit"
                     className="w-full bg-salon-rose text-white hover:bg-salon-rose/90"
                     size="lg"
+                    disabled={isSubmitting}
                   >
-                    Confirmar Agendamento
+                    {isSubmitting ? "Processando..." : "Confirmar Agendamento"}
                   </Button>
                 </div>
               </div>

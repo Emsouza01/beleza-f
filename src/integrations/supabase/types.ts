@@ -9,7 +9,126 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          date: string
+          id: string
+          professional_id: string
+          service_id: string
+          status: string
+          time: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          date: string
+          id?: string
+          professional_id: string
+          service_id: string
+          status: string
+          time: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          date?: string
+          id?: string
+          professional_id?: string
+          service_id?: string
+          status?: string
+          time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professionals: {
+        Row: {
+          availability: Json
+          created_at: string
+          description: string
+          id: string
+          image: string
+          name: string
+          role: string
+          specialties: string[]
+        }
+        Insert: {
+          availability: Json
+          created_at?: string
+          description: string
+          id?: string
+          image: string
+          name: string
+          role: string
+          specialties: string[]
+        }
+        Update: {
+          availability?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          image?: string
+          name?: string
+          role?: string
+          specialties?: string[]
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          duration: number
+          id: string
+          image: string
+          name: string
+          price: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          duration: number
+          id?: string
+          image: string
+          name: string
+          price: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          duration?: number
+          id?: string
+          image?: string
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,12 +1,39 @@
 
-import React from "react";
-import { professionals } from "@/data/sampleData";
+import React, { useState, useEffect } from "react";
+import { getProfessionals } from "@/services/api";
+import { Professional } from "@/types/models";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Professionals = () => {
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      try {
+        setLoading(true);
+        const professionalsData = await getProfessionals();
+        setProfessionals(professionalsData);
+      } catch (error) {
+        console.error("Erro ao buscar profissionais:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os profissionais. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfessionals();
+  }, [toast]);
+
   return (
     <>
       <Navbar />
@@ -24,54 +51,64 @@ const Professionals = () => {
         {/* Professionals List */}
         <section className="py-16">
           <div className="salon-container">
-            <div className="grid grid-cols-1 gap-16">
-              {professionals.map((professional, index) => (
-                <div key={professional.id} className={`grid md:grid-cols-2 gap-8 items-center ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
-                  <div className={`order-1 ${index % 2 === 1 ? 'md:order-2' : 'md:order-1'}`}>
-                    <div className="rounded-lg overflow-hidden shadow-lg">
-                      <img 
-                        src={professional.image} 
-                        alt={professional.name} 
-                        className="w-full h-[400px] object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className={`space-y-6 order-2 ${index % 2 === 1 ? 'md:order-1' : 'md:order-2'}`}>
-                    <h2 className="text-3xl font-bold text-salon-dark">{professional.name}</h2>
-                    <p className="text-xl text-salon-rose">{professional.role}</p>
-                    <p className="text-foreground/80">{professional.description}</p>
-                    
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Especialidades:</h3>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {professional.specialties.map((specialty, idx) => (
-                          <span 
-                            key={idx} 
-                            className="px-3 py-1 text-sm bg-salon-pink/20 text-salon-rose rounded-full"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-lg">Carregando profissionais...</p>
+              </div>
+            ) : professionals.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-lg">Nenhum profissional encontrado.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-16">
+                {professionals.map((professional, index) => (
+                  <div key={professional.id} className={`grid md:grid-cols-2 gap-8 items-center ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
+                    <div className={`order-1 ${index % 2 === 1 ? 'md:order-2' : 'md:order-1'}`}>
+                      <div className="rounded-lg overflow-hidden shadow-lg">
+                        <img 
+                          src={professional.image} 
+                          alt={professional.name} 
+                          className="w-full h-[400px] object-cover"
+                        />
                       </div>
                     </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Disponibilidade:</h3>
-                      <p className="text-foreground/80 mb-1">
-                        <span className="font-medium">Dias:</span> {professional.availability.days.join(", ")}
-                      </p>
-                      <p className="text-foreground/80 mb-4">
-                        <span className="font-medium">Horários:</span> {professional.availability.hours[0]} - {professional.availability.hours[professional.availability.hours.length - 1]}
-                      </p>
+                    <div className={`space-y-6 order-2 ${index % 2 === 1 ? 'md:order-1' : 'md:order-2'}`}>
+                      <h2 className="text-3xl font-bold text-salon-dark">{professional.name}</h2>
+                      <p className="text-xl text-salon-rose">{professional.role}</p>
+                      <p className="text-foreground/80">{professional.description}</p>
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Especialidades:</h3>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {professional.specialties.map((specialty, idx) => (
+                            <span 
+                              key={idx} 
+                              className="px-3 py-1 text-sm bg-salon-pink/20 text-salon-rose rounded-full"
+                            >
+                              {specialty}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Disponibilidade:</h3>
+                        <p className="text-foreground/80 mb-1">
+                          <span className="font-medium">Dias:</span> {professional.availability.days.join(", ")}
+                        </p>
+                        <p className="text-foreground/80 mb-4">
+                          <span className="font-medium">Horários:</span> {professional.availability.hours[0]} - {professional.availability.hours[professional.availability.hours.length - 1]}
+                        </p>
+                      </div>
+                      
+                      <Button asChild className="bg-salon-rose text-white hover:bg-salon-rose/90">
+                        <Link to={`/booking?professionalId=${professional.id}`}>Agendar com {professional.name.split(" ")[0]}</Link>
+                      </Button>
                     </div>
-                    
-                    <Button asChild className="bg-salon-rose text-white hover:bg-salon-rose/90">
-                      <Link to={`/booking?professionalId=${professional.id}`}>Agendar com {professional.name.split(" ")[0]}</Link>
-                    </Button>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

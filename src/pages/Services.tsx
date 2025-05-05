@@ -1,15 +1,42 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { services } from "@/data/sampleData";
+import { getServices } from "@/services/api";
+import { Service } from "@/types/models";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Services = () => {
-  const categories = [...new Set(services.map(service => service.category))];
+  const [services, setServices] = useState<Service[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        const servicesData = await getServices();
+        setServices(servicesData);
+      } catch (error) {
+        console.error("Erro ao buscar serviços:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os serviços. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, [toast]);
+
+  const categories = [...new Set(services.map(service => service.category))];
+  
   const filteredServices = selectedCategory
     ? services.filter(service => service.category === selectedCategory)
     : services;
@@ -56,33 +83,43 @@ const Services = () => {
         {/* Services List */}
         <section className="py-16 bg-muted">
           <div className="salon-container">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredServices.map(service => (
-                <div key={service.id} className="service-card group">
-                  <div className="mb-4 overflow-hidden rounded-md">
-                    <img 
-                      src={service.image} 
-                      alt={service.name} 
-                      className="w-full h-56 object-cover transition-transform group-hover:scale-105"
-                    />
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-lg">Carregando serviços...</p>
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-lg">Nenhum serviço encontrado.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredServices.map(service => (
+                  <div key={service.id} className="service-card group">
+                    <div className="mb-4 overflow-hidden rounded-md">
+                      <img 
+                        src={service.image} 
+                        alt={service.name} 
+                        className="w-full h-56 object-cover transition-transform group-hover:scale-105"
+                      />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
+                    <div className="mb-3">
+                      <span className="inline-block text-sm px-3 py-1 bg-salon-pink/20 text-salon-rose rounded-full">
+                        {service.category}
+                      </span>
+                    </div>
+                    <p className="text-foreground/70 mb-4">{service.description}</p>
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="font-bold text-salon-dark text-lg">R$ {service.price.toFixed(2)}</span>
+                      <span className="text-sm text-foreground/60">{service.duration} min</span>
+                    </div>
+                    <Button asChild className="w-full bg-salon-rose text-white hover:bg-salon-rose/90">
+                      <Link to={`/booking?serviceId=${service.id}`}>Agendar Este Serviço</Link>
+                    </Button>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-                  <div className="mb-3">
-                    <span className="inline-block text-sm px-3 py-1 bg-salon-pink/20 text-salon-rose rounded-full">
-                      {service.category}
-                    </span>
-                  </div>
-                  <p className="text-foreground/70 mb-4">{service.description}</p>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="font-bold text-salon-dark text-lg">R$ {service.price.toFixed(2)}</span>
-                    <span className="text-sm text-foreground/60">{service.duration} min</span>
-                  </div>
-                  <Button asChild className="w-full bg-salon-rose text-white hover:bg-salon-rose/90">
-                    <Link to={`/booking?serviceId=${service.id}`}>Agendar Este Serviço</Link>
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

@@ -1,6 +1,6 @@
 
 export interface Service {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -10,7 +10,7 @@ export interface Service {
 }
 
 export interface Professional {
-  id: number;
+  id: string;
   name: string;
   role: string;
   image: string;
@@ -23,9 +23,9 @@ export interface Professional {
 }
 
 export interface Appointment {
-  id: number;
-  serviceId: number;
-  professionalId: number;
+  id: string;
+  serviceId: string;
+  professionalId: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
